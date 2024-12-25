@@ -1,0 +1,48 @@
+# Block Builder Configuration File
+
+# Server configuration
+server:
+  # Port to listen on (default: 8080)
+  port: 8080
+  
+  # HTTP read timeout in duration format (e.g., 30s, 1m)
+  readTimeout: 30s
+  
+  # HTTP write timeout in duration format
+  writeTimeout: 30s
+  
+  # Graceful shutdown timeout
+  shutdownTimeout: 10s
+
+# Docker connection settings
+docker:
+  # Docker daemon socket/host
+  # Use "unix:///var/run/docker.sock" for Unix socket
+  # Use "tcp://localhost:2375" for TCP connection
+  host: unix:///var/run/docker.sock
+  
+  # Docker API version to use
+  apiVersion: "1.41"
+  
+  # Enable TLS verification for Docker connection
+  tlsVerify: false
+  
+  # Path to TLS certificates (only used if tlsVerify is true)
+  certPath: ""
+
+# Default container settings
+container:
+  # Default CPU shares (relative weight) for containers
+  # 1024 is the default value, which represents 100% of CPU share
+  cpuShares: 1024
+  
+  # Default memory limit in bytes (512MB by default)
+  memoryLimit: 512000000
+  
+  # Default network mode for containers
+  # Options: bridge, host, none, container:<name|id>
+  networkMode: "bridge"
+  
+  # Default restart policy for containers
+  # Options: no, always, on-failure, unless-stopped
+  restartPolicy: "unless-stopped"
