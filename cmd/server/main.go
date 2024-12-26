@@ -38,9 +38,12 @@ func main() {
 	// Register routes
 	router.HandleFunc("/health", healthCheckHandler).Methods("GET")
 
-	// Swagger documentation
-	router.PathPrefix("/swagger/").Handler(httpSwagger.Handler(
-		httpSwagger.URL("/swagger/doc.json"),
+	// Serve Swagger files
+	router.PathPrefix("/swagger/").Handler(http.StripPrefix("/swagger/", http.FileServer(http.Dir("docs"))))
+
+	// Swagger UI
+	router.PathPrefix("/swagger-ui/").Handler(httpSwagger.Handler(
+		httpSwagger.URL("/swagger/swagger.json"),
 		httpSwagger.DeepLinking(true),
 		httpSwagger.DocExpansion("none"),
 		httpSwagger.DomID("swagger-ui"),
