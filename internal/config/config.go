@@ -3,7 +3,6 @@ package config
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 	"strconv"
 	"time"
 
@@ -14,20 +13,21 @@ import (
 type Config struct {
 	Server    ServerConfig    `yaml:"server"`
 	Docker    DockerConfig    `yaml:"docker"`
-	Container ContainerConfig `yaml:"container"`
+	Container ContainerConfig `yaml:"container"logger := logging.GetLogger(ctx)
+	logger.Info("processing request", zap.String("user_id", userID))`
 }
 
 // ServerConfig holds server-specific configuration
 type ServerConfig struct {
-	Port            int           `yaml:"port" env:"SERVER_PORT" default:"8080"`
-	ReadTimeout     time.Duration `yaml:"readTimeout" env:"SERVER_READ_TIMEOUT" default:"30s"`
+	Port            int           `yaml:"port" env:"SERVER_PORT" default:"9090"`
+	ReadTimeout     time.Duration `yaml:"readTimeout" env:"SERVER_READ_TIMEOUT" default:"60s"`
 	WriteTimeout    time.Duration `yaml:"writeTimeout" env:"SERVER_WRITE_TIMEOUT" default:"30s"`
 	ShutdownTimeout time.Duration `yaml:"shutdownTimeout" env:"SERVER_SHUTDOWN_TIMEOUT" default:"10s"`
 }
 
 // DockerConfig holds Docker connection settings
 type DockerConfig struct {
-	Host       string `yaml:"host" env:"DOCKER_HOST" default:"unix:///var/run/docker.sock"`
+	Host       string `yaml:"host" env:"DOCKER_HOST" default:"tcp://localhost:2375"`
 	APIVersion string `yaml:"apiVersion" env:"DOCKER_API_VERSION" default:"1.41"`
 	TLSVerify  bool   `yaml:"tlsVerify" env:"DOCKER_TLS_VERIFY" default:"false"`
 	CertPath   string `yaml:"certPath" env:"DOCKER_CERT_PATH" default:""`
@@ -35,7 +35,7 @@ type DockerConfig struct {
 
 // ContainerConfig holds default container settings
 type ContainerConfig struct {
-	DefaultCPUShares     int64  `yaml:"cpuShares" env:"CONTAINER_CPU_SHARES" default:"1024"`
+	DefaultCPUShares     int64  `yaml:"cpuShares" env:"CONTAINER_CPU_SHARES" default:"2048"`
 	DefaultMemoryLimit   int64  `yaml:"memoryLimit" env:"CONTAINER_MEMORY_LIMIT" default:"512000000"`
 	DefaultNetworkMode   string `yaml:"networkMode" env:"CONTAINER_NETWORK_MODE" default:"bridge"`
 	DefaultRestartPolicy string `yaml:"restartPolicy" env:"CONTAINER_RESTART_POLICY" default:"unless-stopped"`
@@ -117,13 +117,13 @@ func (c *Config) loadAndValidate() error {
 }
 
 func (c *Config) loadServerConfig() error {
-	port, err := getEnvInt("SERVER_PORT", 8080)
+	port, err := getEnvInt("SERVER_PORT", 9090)
 	if err != nil {
 		return &ConfigError{Field: "SERVER_PORT", Message: err.Error()}
 	}
 	c.Server.Port = port
 
-	readTimeout, err := getEnvDuration("SERVER_READ_TIMEOUT", 30*time.Second)
+	readTimeout, err := getEnvDuration("SERVER_READ_TIMEOUT", 60*time.Second)
 	if err != nil {
 		return &ConfigError{Field: "SERVER_READ_TIMEOUT", Message: err.Error()}
 	}
@@ -145,7 +145,7 @@ func (c *Config) loadServerConfig() error {
 }
 
 func (c *Config) loadDockerConfig() error {
-	c.Docker.Host = getEnvString("DOCKER_HOST", "unix:///var/run/docker.sock")
+	c.Docker.Host = getEnvString("DOCKER_HOST", "tcp://localhost:2375")
 	c.Docker.APIVersion = getEnvString("DOCKER_API_VERSION", "1.41")
 	c.Docker.TLSVerify = getEnvBool("DOCKER_TLS_VERIFY", false)
 	c.Docker.CertPath = getEnvString("DOCKER_CERT_PATH", "")
@@ -154,7 +154,7 @@ func (c *Config) loadDockerConfig() error {
 }
 
 func (c *Config) loadContainerConfig() error {
-	cpuShares, err := getEnvInt64("CONTAINER_CPU_SHARES", 1024)
+	cpuShares, err := getEnvInt64("CONTAINER_CPU_SHARES", 2048)
 	if err != nil {
 		return &ConfigError{Field: "CONTAINER_CPU_SHARES", Message: err.Error()}
 	}

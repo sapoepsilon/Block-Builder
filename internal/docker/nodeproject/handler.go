@@ -98,7 +98,29 @@ func (h *ProjectHandler) CreateProjectStructure() error {
 		}
 	}
 
-	return nil
+	// Create package.json
+	pkg := PackageJSON{
+		Name:    "node-project",
+		Version: "1.0.0",
+		Dependencies: map[string]string{
+			"express": "^4.17.1",
+		},
+		Scripts: map[string]string{
+			"start": "node src/index.js",
+		},
+	}
+
+	pkgJSON, err := json.MarshalIndent(pkg, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal package.json: %w", err)
+	}
+
+	if err := os.WriteFile(filepath.Join(h.projectPath, "package.json"), pkgJSON, 0644); err != nil {
+		return fmt.Errorf("failed to write package.json: %w", err)
+	}
+
+	// Generate Dockerfile
+	return h.GenerateDockerfile()
 }
 
 // GenerateDockerfile creates a Dockerfile for the project
@@ -115,12 +137,11 @@ COPY . .
 
 EXPOSE %s
 
-CMD ["npm", "start"]
-`, h.config.BaseImage, h.config.DefaultPort)
+CMD ["npm", "start"]`, h.config.BaseImage, h.config.DefaultPort)
 
 	err := os.WriteFile(filepath.Join(h.projectPath, "Dockerfile"), []byte(dockerfile), 0644)
 	if err != nil {
-		return fmt.Errorf("failed to create Dockerfile: %w", err)
+		return fmt.Errorf("failed to write Dockerfile: %w", err)
 	}
 
 	return nil

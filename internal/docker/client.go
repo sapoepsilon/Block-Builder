@@ -13,47 +13,9 @@ import (
 	"github.com/docker/docker/pkg/stdcopy"
 )
 
-// Client wraps the Docker client and provides high-level operations
+// Client wraps the Docker client
 type Client struct {
 	cli *client.Client
-}
-
-// ContainerConfig represents the configuration for creating a container
-type ContainerConfig struct {
-	Image        string
-	Command      []string
-	Env          []string
-	WorkingDir   string
-	CPUShares    int64
-	MemoryLimit  int64
-	NetworkMode  string
-	RestartPolicy string
-	Labels       map[string]string
-}
-
-// ContainerInfo represents container information
-type ContainerInfo struct {
-	ID          string
-	Name        string
-	Image       string
-	Status      string
-	CreatedAt   time.Time
-	State       string
-	Labels      map[string]string
-}
-
-// ClientError represents Docker client operation errors
-type ClientError struct {
-	Op      string
-	Err     error
-	Details string
-}
-
-func (e *ClientError) Error() string {
-	if e.Details != "" {
-		return fmt.Sprintf("docker %s failed: %v (%s)", e.Op, e.Err, e.Details)
-	}
-	return fmt.Sprintf("docker %s failed: %v", e.Op, e.Err)
 }
 
 // NewClient creates a new Docker client
@@ -82,6 +44,44 @@ func NewClient(host, version string, tlsVerify bool, certPath string) (*Client, 
 	return &Client{cli: cli}, nil
 }
 
+// ClientError represents Docker client operation errors
+type ClientError struct {
+	Op      string
+	Err     error
+	Details string
+}
+
+func (e *ClientError) Error() string {
+	if e.Details != "" {
+		return fmt.Sprintf("docker %s failed: %v (%s)", e.Op, e.Err, e.Details)
+	}
+	return fmt.Sprintf("docker %s failed: %v", e.Op, e.Err)
+}
+
+// ContainerConfig represents the configuration for creating a container
+type ContainerConfig struct {
+	Image        string
+	Command      []string
+	Env          []string
+	WorkingDir   string
+	CPUShares    int64
+	MemoryLimit  int64
+	NetworkMode  string
+	RestartPolicy string
+	Labels       map[string]string
+}
+
+// ContainerInfo represents container information
+type ContainerInfo struct {
+	ID          string
+	Name        string
+	Image       string
+	Status      string
+	CreatedAt   time.Time
+	State       string
+	Labels      map[string]string
+}
+
 // CreateContainer creates a new container with the given configuration
 func (c *Client) CreateContainer(ctx context.Context, name string, config ContainerConfig) (string, error) {
 	containerConfig := &container.Config{
@@ -97,9 +97,9 @@ func (c *Client) CreateContainer(ctx context.Context, name string, config Contai
 			CPUShares: config.CPUShares,
 			Memory:    config.MemoryLimit,
 		},
-		NetworkMode:   container.NetworkMode(config.NetworkMode),
+		NetworkMode: container.NetworkMode(config.NetworkMode),
 		RestartPolicy: container.RestartPolicy{
-			Name: config.RestartPolicy,
+			Name: container.RestartPolicyMode(config.RestartPolicy),
 		},
 	}
 
@@ -119,6 +119,11 @@ func (c *Client) CreateContainer(ctx context.Context, name string, config Contai
 	return resp.ID, nil
 }
 
+// StartContainer starts a container
+func (c *Client) StartContainer(ctx context.Context, containerID string) error {
+	return c.cli.ContainerStart(ctx, containerID, container.StartOptions{})
+}
+
 // ListContainers returns a list of containers
 func (c *Client) ListContainers(ctx context.Context, all bool, labelFilter map[string]string) ([]ContainerInfo, error) {
 	filterArgs := filters.NewArgs()
@@ -126,7 +131,7 @@ func (c *Client) ListContainers(ctx context.Context, all bool, labelFilter map[s
 		filterArgs.Add("label", fmt.Sprintf("%s=%s", k, v))
 	}
 
-	containers, err := c.cli.ContainerList(ctx, types.ContainerListOptions{
+	containers, err := c.cli.ContainerList(ctx, container.ListOptions{
 		All:     all,
 		Filters: filterArgs,
 	})
@@ -155,22 +160,14 @@ func (c *Client) ListContainers(ctx context.Context, all bool, labelFilter map[s
 
 // RemoveContainer removes a container
 func (c *Client) RemoveContainer(ctx context.Context, containerID string, force bool) error {
-	err := c.cli.ContainerRemove(ctx, containerID, types.ContainerRemoveOptions{
+	return c.cli.ContainerRemove(ctx, containerID, container.RemoveOptions{
 		Force: force,
 	})
-	if err != nil {
-		return &ClientError{
-			Op:  "remove_container",
-			Err: err,
-		}
-	}
-
-	return nil
 }
 
 // GetContainerLogs retrieves container logs
 func (c *Client) GetContainerLogs(ctx context.Context, containerID string, tail string) (string, error) {
-	options := types.ContainerLogsOptions{
+	options := container.LogsOptions{
 		ShowStdout: true,
 		ShowStderr: true,
 		Tail:       tail,
@@ -206,6 +203,11 @@ func (c *Client) GetContainerLogs(ctx context.Context, containerID string, tail 
 
 	// Combine stdout and stderr
 	return fmt.Sprintf("STDOUT:\n%s\nSTDERR:\n%s", stdoutBuf.String(), stderrBuf.String()), nil
+}
+
+// CopyToContainer copies files to a container
+func (c *Client) CopyToContainer(ctx context.Context, containerID, dstPath string, content io.Reader) error {
+	return c.cli.CopyToContainer(ctx, containerID, dstPath, content, types.CopyToContainerOptions{})
 }
 
 // Helper type for capturing container logs

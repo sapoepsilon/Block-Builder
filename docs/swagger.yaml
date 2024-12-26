@@ -1,0 +1,211 @@
+definitions:
+  docker.Container:
+    properties:
+      created:
+        type: integer
+      id:
+        type: string
+      image:
+        type: string
+      labels:
+        additionalProperties:
+          type: string
+        type: object
+      name:
+        type: string
+      networkMode:
+        type: string
+      ports:
+        items:
+          $ref: '#/definitions/docker.Port'
+        type: array
+      state:
+        type: string
+      status:
+        type: string
+    type: object
+  docker.Port:
+    properties:
+      privatePort:
+        type: integer
+      publicPort:
+        type: integer
+      type:
+        type: string
+    type: object
+  handlers.CreateContainerRequest:
+    description: Request body for creating a new container
+    properties:
+      cpuShares:
+        example: 1024
+        type: integer
+      env:
+        example:
+        - NODE_ENV=production
+        items:
+          type: string
+        type: array
+      labels:
+        additionalProperties:
+          type: string
+        example:
+          environment: production
+        type: object
+      memoryLimit:
+        example: 536870912
+        type: integer
+      name:
+        example: my-app-container
+        type: string
+      networkMode:
+        example: bridge
+        type: string
+      projectPath:
+        example: /path/to/nodejs/project
+        type: string
+    required:
+    - name
+    - projectPath
+    type: object
+  handlers.ErrorResponse:
+    properties:
+      details:
+        type: string
+      error:
+        type: string
+    type: object
+info:
+  contact: {}
+paths:
+  /containers:
+    get:
+      description: Get a list of all containers
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/docker.Container'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      summary: List all containers
+      tags:
+      - containers
+  /containers/{id}:
+    delete:
+      description: Delete a container by ID
+      parameters:
+      - description: Container ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      summary: Delete a container
+      tags:
+      - containers
+    get:
+      description: Get detailed information about a container
+      parameters:
+      - description: Container ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/docker.Container'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      summary: Get container by ID
+      tags:
+      - containers
+  /containers/{id}/logs:
+    get:
+      description: Get logs from a container
+      parameters:
+      - description: Container ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - text/plain
+      responses:
+        "200":
+          description: Container logs
+          schema:
+            type: string
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      summary: Get container logs
+      tags:
+      - containers
+  /containers/create:
+    post:
+      consumes:
+      - application/json
+      description: Create a new container from a Node.js project
+      parameters:
+      - description: Container configuration
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.CreateContainerRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/docker.Container'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      summary: Create a new container
+      tags:
+      - containers
+swagger: "2.0"

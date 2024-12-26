@@ -9,7 +9,9 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
+
 	"github.com/gorilla/mux"
+	httpSwagger "github.com/swaggo/http-swagger"
 )
 
 // HealthCheckResponse is the response structure for health check
@@ -35,6 +37,14 @@ func main() {
 	
 	// Register routes
 	router.HandleFunc("/health", healthCheckHandler).Methods("GET")
+
+	// Swagger documentation
+	router.PathPrefix("/swagger/").Handler(httpSwagger.Handler(
+		httpSwagger.URL("/swagger/doc.json"),
+		httpSwagger.DeepLinking(true),
+		httpSwagger.DocExpansion("none"),
+		httpSwagger.DomID("swagger-ui"),
+	))
 
 	// Create a new HTTP server with timeouts
 	srv := &http.Server{

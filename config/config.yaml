@@ -3,10 +3,10 @@
 # Server configuration
 server:
   # Port to listen on (default: 8080)
-  port: 8080
+  port: 9090
   
   # HTTP read timeout in duration format (e.g., 30s, 1m)
-  readTimeout: 30s
+  readTimeout: 60s
   
   # HTTP write timeout in duration format
   writeTimeout: 30s
@@ -19,7 +19,7 @@ docker:
   # Docker daemon socket/host
   # Use "unix:///var/run/docker.sock" for Unix socket
   # Use "tcp://localhost:2375" for TCP connection
-  host: unix:///var/run/docker.sock
+  host: "tcp://localhost:2375"
   
   # Docker API version to use
   apiVersion: "1.41"

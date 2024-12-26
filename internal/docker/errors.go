@@ -3,8 +3,6 @@ package docker
 import (
 	"errors"
 	"strings"
-
-	"github.com/docker/docker/api/types"
 )
 
 var (

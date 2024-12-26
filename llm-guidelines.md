@@ -194,6 +194,7 @@ func TestProcessRequest(t *testing.T) {
 - Design clean interfaces
 
 ### Configuration
+
 - Make sure to keep all the configuration in one place which is @config/config.yaml
 
 ### Documentation
@@ -210,4 +211,4 @@ func TestProcessRequest(t *testing.T) {
 - Use efficient algorithms
 - Add proper logging for debugging
 
-Remember that these guidelines are meant to ensure consistency and quality while making the codebase maintainable and reliable. When in doubt, prioritize clarity and maintainability over clever optimizations.
+Remember that these guidelines are meant to ensure consistency and quality while making the codebase maintainable and reliable. When in doubt, please ask questions!
