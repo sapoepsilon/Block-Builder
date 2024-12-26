@@ -10,6 +10,8 @@ import (
 	"syscall"
 	"time"
 
+	"docker-management-system/internal/api/handlers"
+	"docker-management-system/internal/docker"
 	"github.com/gorilla/mux"
 	httpSwagger "github.com/swaggo/http-swagger"
 )
@@ -35,8 +37,30 @@ func main() {
 	router := mux.NewRouter()
 	router.Use(loggingMiddleware)
 	
+	// Initialize Docker client
+	dockerClient, err := docker.NewClient("unix:///var/run/docker.sock", "1.41", false, "")
+	if err != nil {
+		log.Fatalf("Failed to create Docker client: %v", err)
+	}
+
+	// Initialize container handler
+	containerHandler := handlers.NewContainerHandler(dockerClient)
+
 	// Register routes
 	router.HandleFunc("/health", healthCheckHandler).Methods("GET")
+
+	// Container routes
+	apiRouter := router.PathPrefix("/api/v1").Subrouter()
+	apiRouter.HandleFunc("/containers", containerHandler.ListContainers).Methods("GET")
+	apiRouter.HandleFunc("/containers/{id}", containerHandler.GetContainer).Methods("GET")
+	apiRouter.HandleFunc("/containers/{id}/logs", containerHandler.GetContainerLogs).Methods("GET")
+	apiRouter.HandleFunc("/containers/{id}", containerHandler.DeleteContainer).Methods("DELETE")
+
+	// Legacy routes without /api/v1 prefix for backward compatibility
+	router.HandleFunc("/containers", containerHandler.ListContainers).Methods("GET")
+	router.HandleFunc("/containers/{id}", containerHandler.GetContainer).Methods("GET")
+	router.HandleFunc("/containers/{id}/logs", containerHandler.GetContainerLogs).Methods("GET")
+	router.HandleFunc("/containers/{id}", containerHandler.DeleteContainer).Methods("DELETE")
 
 	// Serve Swagger files
 	router.PathPrefix("/swagger/").Handler(http.StripPrefix("/swagger/", http.FileServer(http.Dir("docs"))))
