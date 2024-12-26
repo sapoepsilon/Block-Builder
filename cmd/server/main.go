@@ -12,6 +12,7 @@ import (
 
 	"docker-management-system/internal/api/handlers"
 	"docker-management-system/internal/docker"
+	gorillaHandlers "github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	httpSwagger "github.com/swaggo/http-swagger"
 )
@@ -37,8 +38,19 @@ func main() {
 	router := mux.NewRouter()
 	router.Use(loggingMiddleware)
 	
+	// Add CORS middleware
+	corsMiddleware := gorillaHandlers.CORS(
+		gorillaHandlers.AllowedOrigins([]string{"*"}),
+		gorillaHandlers.AllowedMethods([]string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}),
+		gorillaHandlers.AllowedHeaders([]string{"Content-Type", "Authorization", "X-Requested-With"}),
+		gorillaHandlers.AllowCredentials(),
+	)
+	
+	// Apply CORS middleware to all routes
+	handler := corsMiddleware(router)
+
 	// Initialize Docker client
-	dockerClient, err := docker.NewClient("unix:///var/run/docker.sock", "1.41", false, "")
+	dockerClient, err := docker.NewClient("unix:///var/run/docker.sock", "", false, "")
 	if err != nil {
 		log.Fatalf("Failed to create Docker client: %v", err)
 	}
@@ -47,20 +59,20 @@ func main() {
 	containerHandler := handlers.NewContainerHandler(dockerClient)
 
 	// Register routes
-	router.HandleFunc("/health", healthCheckHandler).Methods("GET")
+	router.HandleFunc("/health", healthCheckHandler).Methods("GET", "OPTIONS")
 
-	// Container routes
+	// Container routes with explicit OPTIONS handling
 	apiRouter := router.PathPrefix("/api/v1").Subrouter()
-	apiRouter.HandleFunc("/containers", containerHandler.ListContainers).Methods("GET")
-	apiRouter.HandleFunc("/containers/{id}", containerHandler.GetContainer).Methods("GET")
-	apiRouter.HandleFunc("/containers/{id}/logs", containerHandler.GetContainerLogs).Methods("GET")
-	apiRouter.HandleFunc("/containers/{id}", containerHandler.DeleteContainer).Methods("DELETE")
+	apiRouter.HandleFunc("/containers", containerHandler.ListContainers).Methods("GET", "OPTIONS")
+	apiRouter.HandleFunc("/containers/{id}", containerHandler.GetContainer).Methods("GET", "OPTIONS")
+	apiRouter.HandleFunc("/containers/{id}/logs", containerHandler.GetContainerLogs).Methods("GET", "OPTIONS")
+	apiRouter.HandleFunc("/containers/{id}", containerHandler.DeleteContainer).Methods("DELETE", "OPTIONS")
 
 	// Legacy routes without /api/v1 prefix for backward compatibility
-	router.HandleFunc("/containers", containerHandler.ListContainers).Methods("GET")
-	router.HandleFunc("/containers/{id}", containerHandler.GetContainer).Methods("GET")
-	router.HandleFunc("/containers/{id}/logs", containerHandler.GetContainerLogs).Methods("GET")
-	router.HandleFunc("/containers/{id}", containerHandler.DeleteContainer).Methods("DELETE")
+	router.HandleFunc("/containers", containerHandler.ListContainers).Methods("GET", "OPTIONS")
+	router.HandleFunc("/containers/{id}", containerHandler.GetContainer).Methods("GET", "OPTIONS")
+	router.HandleFunc("/containers/{id}/logs", containerHandler.GetContainerLogs).Methods("GET", "OPTIONS")
+	router.HandleFunc("/containers/{id}", containerHandler.DeleteContainer).Methods("DELETE", "OPTIONS")
 
 	// Serve Swagger files
 	router.PathPrefix("/swagger/").Handler(http.StripPrefix("/swagger/", http.FileServer(http.Dir("docs"))))
@@ -75,7 +87,7 @@ func main() {
 
 	// Create a new HTTP server with timeouts
 	srv := &http.Server{
-		Handler:      router,
+		Handler:      handler,  // Use the wrapped handler with CORS
 		Addr:         ":8080",
 		WriteTimeout: 15 * time.Second,
 		ReadTimeout:  15 * time.Second,

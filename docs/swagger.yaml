@@ -34,33 +34,41 @@ definitions:
         type: string
     type: object
   handlers.CreateContainerRequest:
-    description: Request body for creating a new container
+    description: Request body for creating a new container from a Node.js project
     properties:
       cpuShares:
+        description: CPU shares (relative weight)
         example: 1024
         type: integer
       env:
+        description: Environment variables for the Node.js application
         example:
         - NODE_ENV=production
+        - PORT=3000
         items:
           type: string
         type: array
       labels:
         additionalProperties:
           type: string
+        description: Docker container labels
         example:
           environment: production
         type: object
       memoryLimit:
+        description: Memory limit in bytes
         example: 536870912
         type: integer
       name:
-        example: my-app-container
+        description: Name for the container
+        example: my-nodejs-app
         type: string
       networkMode:
+        description: Docker network mode
         example: bridge
         type: string
       projectPath:
+        description: Path to the Node.js project containing package.json
         example: /path/to/nodejs/project
         type: string
     required:
@@ -180,32 +188,44 @@ paths:
       - containers
   /containers/create:
     post:
+      description: |
+        Creates a new container from a Node.js project. The system will:
+        - Validate the Node.js project structure
+        - Generate a Dockerfile automatically
+        - Configure the container with Node.js best practices
+        
+        Requirements:
+        - Project must contain a valid package.json with name and version fields
+        - Container will expose port 3000 by default
+        - Container will use 'npm start' as the entry command
       consumes:
       - application/json
-      description: Create a new container from a Node.js project
+      produces:
+      - application/json
       parameters:
-      - description: Container configuration
+      - description: Node.js container configuration
         in: body
         name: request
         required: true
         schema:
           $ref: '#/definitions/handlers.CreateContainerRequest'
-      produces:
-      - application/json
       responses:
-        "200":
-          description: OK
+        "201":
+          description: Container created successfully
           schema:
-            $ref: '#/definitions/docker.Container'
+            properties:
+              containerId:
+                type: string
+            type: object
         "400":
-          description: Bad Request
+          description: Invalid request or invalid Node.js project structure
           schema:
             $ref: '#/definitions/handlers.ErrorResponse'
         "500":
-          description: Internal Server Error
+          description: Server error or Docker operation failed
           schema:
             $ref: '#/definitions/handlers.ErrorResponse'
-      summary: Create a new container
+      summary: Create a new Node.js container
       tags:
       - containers
 swagger: "2.0"

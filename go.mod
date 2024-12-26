@@ -5,6 +5,7 @@ go 1.23.4
 require (
 	github.com/docker/docker v27.4.1+incompatible
 	github.com/google/uuid v1.6.0
+	github.com/gorilla/handlers v1.5.2
 	github.com/gorilla/mux v1.8.1
 	github.com/swaggo/http-swagger v1.3.4
 	github.com/swaggo/swag v1.16.2
